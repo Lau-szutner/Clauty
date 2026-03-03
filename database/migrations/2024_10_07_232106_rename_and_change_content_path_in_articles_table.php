@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('articles', function (Blueprint $table) {
-            // Renombrar la columna 'content_path' a 'body' y cambiar su tipo a MEDIUMTEXT
-            $table->mediumText('content_path')->change();
+            // En Postgres, simplemente usamos 'text' 
+            // y hacemos el rename por separado para evitar conflictos
+            $table->text('content_path')->change();
+        });
+
+        Schema::table('articles', function (Blueprint $table) {
             $table->renameColumn('content_path', 'body');
         });
     }
