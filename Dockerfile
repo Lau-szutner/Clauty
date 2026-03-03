@@ -1,6 +1,6 @@
-FROM php:8.2-apache
+FROM php:8.3-apache
 
-# Instalar solo lo esencial para que PHP hable con PostgreSQL y maneje archivos
+# Instalar dependencias del sistema y extensiones de PHP para PostgreSQL
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y \
     git \
     && docker-php-ext-install pdo pdo_pgsql zip
 
-# Habilitar mod_rewrite de Apache para Laravel
+# Habilitar mod_rewrite de Apache
 RUN a2enmod rewrite
 
-# Configurar el DocumentRoot a /public
+# Configurar el DocumentRoot
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
@@ -20,18 +20,17 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiar el código al servidor
+# Copiar el código
 WORKDIR /var/www/html
 COPY . .
 
-# Instalar dependencias de Laravel
-# Usamos --no-scripts para evitar que intente correr artisan antes de tiempo
+# Instalar dependencias de Laravel (Ahora sí coincidirán las versiones)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Permisos correctos para Laravel
+# Permisos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 80
 
-# Al iniciar: limpia caché, corre migraciones y arranca Apache
+# Comando de inicio: Limpiar caché, migraciones y arrancar Apache
 CMD php artisan config:clear && php artisan migrate --force && apache2-foreground
